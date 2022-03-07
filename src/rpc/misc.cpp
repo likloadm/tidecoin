@@ -299,7 +299,7 @@ static UniValue verifymessage(const JSONRPCRequest& request)
     if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
         return NullUniValue;
     }
-     auto locked_chain = pwallet->chain().lock();
+    auto locked_chain = pwallet->chain().lock();
     LOCK(pwallet->cs_wallet);
 
     EnsureWalletIsUnlocked(pwallet);
@@ -332,7 +332,7 @@ static UniValue verifymessage(const JSONRPCRequest& request)
     if (!pubkey.RecoverCompact(ss.GetHash(), vchSig))
         return false;
 
-    return (pubkey.GetID() == keyID);
+    return (pubkey.GetID() == keyid);
 }
 
 static UniValue signmessagewithprivkey(const JSONRPCRequest& request)
