@@ -293,8 +293,16 @@ static UniValue verifymessage(const JSONRPCRequest& request)
             + HelpExampleRpc("verifymessage", "\"LEr4HnaefWYHbMGXcFp2Po1NPRUeIk8km2\", \"signature\", \"my message\"")
                 },
             }.ToString());
+    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
+    CWallet* const pwallet = wallet.get();
 
-    LOCK(cs_main);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+     auto locked_chain = pwallet->chain().lock();
+    LOCK(pwallet->cs_wallet);
+
+    EnsureWalletIsUnlocked(pwallet);
 
     std::string strAddress  = request.params[0].get_str();
     std::string strSign     = request.params[1].get_str();
@@ -305,7 +313,7 @@ static UniValue verifymessage(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
     }
 
-    auto keyid = GetKeyForDestination(*pwallet, dest);
+    auto keyid = GetKeyForDestination(*pwallet, destination);
     if (keyid.IsNull()) {
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to key");
     }
