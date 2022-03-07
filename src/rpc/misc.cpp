@@ -22,8 +22,6 @@
 #include <util/strencodings.h>
 #include <warnings.h>
 #include <wallet/wallet.h>
-#include <wallet/walletdb.h>
-#include <wallet/walletutil.h>
 #include <wallet/rpcwallet.h>
 
 #include <stdint.h>
