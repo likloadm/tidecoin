@@ -1,6 +1,6 @@
 /*-
  * Copyright 2009 Colin Percival
- * Copyright 2012-2018 Alexander Peslyak
+ * Copyright 2012-2019 Alexander Peslyak
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
  * This is a proof-of-work focused fork of yescrypt, including optimized and
  * cut-down implementation of the obsolete yescrypt 0.5 (based off its first
  * submission to PHC back in 2014) and a new proof-of-work specific variation
- * known as yespower 0.9.  The former is intended as an upgrade for
+ * known as yespower 1.0.  The former is intended as an upgrade for
  * cryptocurrencies that already use yescrypt 0.5 and the latter may be used
  * as a further upgrade (hard fork) by those and other cryptocurrencies.  The
  * version of algorithm to use is requested through parameters, allowing for
@@ -95,7 +95,7 @@
 #include <string.h>
 
 #include "insecure_memzero.h"
-#include "sha256-P.h"
+#include "sha256.h"
 #include "sysendian.h"
 
 #include "yespower.h"
@@ -208,12 +208,12 @@ static inline void salsa20_simd_unshuffle(const salsa20_blk_t *Bin,
  * Apply the Salsa20 core to the block provided in (X0 ... X3).
  */
 #define SALSA20_wrapper(out, rounds) { \
-	__m128i Y0 = X0, Y1 = X1, Y2 = X2, Y3 = X3; \
+	__m128i Z0 = X0, Z1 = X1, Z2 = X2, Z3 = X3; \
 	rounds \
-	(out).q[0] = X0 = _mm_add_epi32(X0, Y0); \
-	(out).q[1] = X1 = _mm_add_epi32(X1, Y1); \
-	(out).q[2] = X2 = _mm_add_epi32(X2, Y2); \
-	(out).q[3] = X3 = _mm_add_epi32(X3, Y3); \
+	(out).q[0] = X0 = _mm_add_epi32(X0, Z0); \
+	(out).q[1] = X1 = _mm_add_epi32(X1, Z1); \
+	(out).q[2] = X2 = _mm_add_epi32(X2, Z2); \
+	(out).q[3] = X3 = _mm_add_epi32(X3, Z3); \
 }
 
 /**
@@ -408,8 +408,8 @@ static inline uint32_t blockmix_salsa_xor(const salsa20_blk_t *restrict Bin1,
 /* This is tunable, but it is part of what defines a yespower version */
 /* Version 0.5 */
 #define Swidth_0_5 8
-/* Version 0.9 */
-#define Swidth_0_9 11
+/* Version 1.0 */
+#define Swidth_1_0 11
 
 /* Not tunable in this implementation, hard-coded in a few places */
 #define PWXsimple 2
@@ -425,7 +425,7 @@ static inline uint32_t blockmix_salsa_xor(const salsa20_blk_t *restrict Bin1,
 
 /* These should be compile-time derived */
 #define Smask2_0_5 Smask_to_Smask2(Swidth_to_Smask(Swidth_0_5))
-#define Smask2_0_9 Smask_to_Smask2(Swidth_to_Smask(Swidth_0_9))
+#define Smask2_1_0 Smask_to_Smask2(Swidth_to_Smask(Swidth_1_0))
 
 typedef struct {
 	uint8_t *S0, *S1, *S2;
@@ -531,6 +531,11 @@ static volatile uint64_t Smask2var = Smask2;
 #undef MAYBE_MEMORY_BARRIER
 #define MAYBE_MEMORY_BARRIER \
 	__asm__("" : : : "memory");
+#ifdef __ILP32__ /* x32 */
+#define REGISTER_PREFIX "e"
+#else
+#define REGISTER_PREFIX "r"
+#endif
 #define PWXFORM_SIMD(X) { \
 	__m128i H; \
 	__asm__( \
@@ -540,8 +545,8 @@ static volatile uint64_t Smask2var = Smask2;
 	    "pmuludq %1, %0\n\t" \
 	    "movl %%eax, %%ecx\n\t" \
 	    "shrq $0x20, %%rax\n\t" \
-	    "paddq (%3,%%rcx), %0\n\t" \
-	    "pxor (%4,%%rax), %0\n\t" \
+	    "paddq (%3,%%" REGISTER_PREFIX "cx), %0\n\t" \
+	    "pxor (%4,%%" REGISTER_PREFIX "ax), %0\n\t" \
 	    : "+x" (X), "=x" (H) \
 	    : "d" (Smask2), "S" (S0), "D" (S1) \
 	    : "cc", "ax", "cx"); \
@@ -652,7 +657,7 @@ static volatile uint64_t Smask2var = Smask2;
 	}
 
 #undef Smask2
-#define Smask2 Smask2_0_9
+#define Smask2 Smask2_1_0
 
 #endif
 
@@ -949,12 +954,10 @@ static void smix2(uint8_t *B, size_t r, uint32_t N, uint32_t Nloop,
 		} while (Nloop -= 2);
 #if _YESPOWER_OPT_C_PASS_ == 1
 	} else {
-		do {
-			const salsa20_blk_t * V_j = &V[j * s];
-			j = blockmix_xor(X, V_j, Y, r, ctx) & (N - 1);
-			V_j = &V[j * s];
-			j = blockmix_xor(Y, V_j, X, r, ctx) & (N - 1);
-		} while (Nloop -= 2);
+		const salsa20_blk_t * V_j = &V[j * s];
+		j = blockmix_xor(X, V_j, Y, r, ctx) & (N - 1);
+		V_j = &V[j * s];
+		blockmix_xor(Y, V_j, X, r, ctx);
 	}
 #endif
 
@@ -1004,14 +1007,14 @@ static void smix(uint8_t *B, size_t r, uint32_t N,
 #if _YESPOWER_OPT_C_PASS_ == 1
 #undef _YESPOWER_OPT_C_PASS_
 #define _YESPOWER_OPT_C_PASS_ 2
-#define blockmix_salsa blockmix_salsa_0_9
-#define blockmix_salsa_xor blockmix_salsa_xor_0_9
-#define blockmix blockmix_0_9
-#define blockmix_xor blockmix_xor_0_9
-#define blockmix_xor_save blockmix_xor_save_0_9
-#define smix1 smix1_0_9
-#define smix2 smix2_0_9
-#define smix smix_0_9
+#define blockmix_salsa blockmix_salsa_1_0
+#define blockmix_salsa_xor blockmix_salsa_xor_1_0
+#define blockmix blockmix_1_0
+#define blockmix_xor blockmix_xor_1_0
+#define blockmix_xor_save blockmix_xor_save_1_0
+#define smix1 smix1_1_0
+#define smix2 smix2_1_0
+#define smix smix_1_0
 #include "yespower-opt.c"
 #undef smix
 
@@ -1041,12 +1044,12 @@ int yespower(yespower_local_t *local,
 	uint8_t sha256[32];
 
 	/* Sanity-check parameters */
-	if ((version != YESPOWER_0_5 && version != YESPOWER_0_9) ||
+	if ((version != YESPOWER_0_5 && version != YESPOWER_1_0) ||
 	    N < 1024 || N > 512 * 1024 || r < 8 || r > 32 ||
 	    (N & (N - 1)) != 0 ||
 	    (!pers && perslen)) {
 		errno = EINVAL;
-		return -1;
+		goto fail;
 	}
 
 	/* Allocate memory */
@@ -1058,15 +1061,15 @@ int yespower(yespower_local_t *local,
 		ctx.Sbytes = 2 * Swidth_to_Sbytes1(Swidth);
 	} else {
 		XY_size = B_size + 64;
-		Swidth = Swidth_0_9;
+		Swidth = Swidth_1_0;
 		ctx.Sbytes = 3 * Swidth_to_Sbytes1(Swidth);
 	}
 	need = B_size + V_size + XY_size + ctx.Sbytes;
 	if (local->aligned_size < need) {
 		if (free_region(local))
-			return -1;
+			goto fail;
 		if (!alloc_region(local, need))
-			return -1;
+			goto fail;
 	}
 	B = (uint8_t *)local->aligned;
 	V = (salsa20_blk_t *)((uint8_t *)B + B_size);
@@ -1078,11 +1081,11 @@ int yespower(yespower_local_t *local,
 	SHA256_Buf(src, srclen, sha256);
 
 	if (version == YESPOWER_0_5) {
-		PBKDF2_SHA256_P(sha256, sizeof(sha256), src, srclen, 1,
+		PBKDF2_SHA256(sha256, sizeof(sha256), src, srclen, 1,
 		    B, B_size);
 		memcpy(sha256, B, sizeof(sha256));
 		smix(B, r, N, V, XY, &ctx);
-		PBKDF2_SHA256_P(sha256, sizeof(sha256), B, B_size, 1,
+		PBKDF2_SHA256(sha256, sizeof(sha256), B, B_size, 1,
 		    (uint8_t *)dst, sizeof(*dst));
 
 		if (pers) {
@@ -1101,15 +1104,19 @@ int yespower(yespower_local_t *local,
 			srclen = 0;
 		}
 
-		PBKDF2_SHA256_P(sha256, sizeof(sha256), src, srclen, 1, B, 128);
+		PBKDF2_SHA256(sha256, sizeof(sha256), src, srclen, 1, B, 128);
 		memcpy(sha256, B, sizeof(sha256));
-		smix_0_9(B, r, N, V, XY, &ctx);
+		smix_1_0(B, r, N, V, XY, &ctx);
 		HMAC_SHA256_Buf(B + B_size - 64, 64,
 		    sha256, sizeof(sha256), (uint8_t *)dst);
 	}
 
 	/* Success! */
 	return 0;
+
+fail:
+	memset(dst, 0xff, sizeof(*dst));
+	return -1;
 }
 
 /**
@@ -1126,8 +1133,7 @@ int yespower_tls(const uint8_t *src, size_t srclen,
 	static __thread yespower_local_t local;
 
 	if (!initialized) {
-		if (yespower_init_local(&local))
-			return -1;
+		init_region(&local);
 		initialized = 1;
 	}
 
