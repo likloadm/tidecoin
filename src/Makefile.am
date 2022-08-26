@@ -472,6 +472,7 @@ libbitcoin_common_a_SOURCES = \
   vrfy.cpp \
   rng.cpp \
   api.h \
+  tdc/delay.cpp \
   $(BITCOIN_CORE_H)
  
 
