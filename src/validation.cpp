@@ -18,6 +18,7 @@
 #include <hash.h>
 #include <index/txindex.h>
 #include <policy/fees.h>
+#include <tdc/delay.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
 #include <pow.h>
