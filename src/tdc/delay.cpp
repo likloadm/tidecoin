@@ -1,4 +1,4 @@
-#include "qtum/delay.h"
+#include "tdc/delay.h"
 
 int GetBlockDelay(const CBlockIndex& newBlock, const CBlockIndex& prevBlock, const int activeChainHeight, const bool isStartupSyncing)
 {
