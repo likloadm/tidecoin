@@ -61,6 +61,10 @@ namespace {
     struct CBlockIndexWorkComparator
     {
         bool operator()(const CBlockIndex *pa, const CBlockIndex *pb) const {
+            // First sort by total delay in chain.
+            if (pa->nChainDelay < pb->nChainDelay) return false;
+            if (pa->nChainDelay > pb->nChainDelay) return true;
+
             // First sort by most total work, ...
             if (pa->nChainWork > pb->nChainWork) return false;
             if (pa->nChainWork < pb->nChainWork) return true;
@@ -234,6 +238,7 @@ int nScriptCheckThreads = 0;
 std::atomic_bool fImporting(false);
 std::atomic_bool fReindex(false);
 bool fHavePruned = false;
+bool fIsStartupSyncing = true;
 bool fPruneMode = false;
 bool fIsBareMultisigStd = DEFAULT_PERMIT_BAREMULTISIG;
 bool fRequireStandard = true;
@@ -2259,11 +2264,16 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
         if (nUpgraded > 0)
             AppendWarning(warningMessages, strprintf(_("%d of last 100 blocks have unexpected version"), nUpgraded));
     }
+    double syncProgress = GuessVerificationProgress(chainParams.TxData(), pindexNew);
+    if(fIsStartupSyncing && std::abs(1.0 - syncProgress) < 0.000001) {
+        LogPrintf("Fully synchronized at block height %d\n", pindexNew->nHeight);
+        fIsStartupSyncing = false;
+    }
     LogPrintf("%s: new best=%s height=%d version=0x%08x log2_work=%.8g tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)", __func__, /* Continued */
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight, pindexNew->nVersion,
       log(pindexNew->nChainWork.getdouble())/log(2.0), (unsigned long)pindexNew->nChainTx,
       FormatISO8601DateTime(pindexNew->GetBlockTime()),
-      GuessVerificationProgress(chainParams.TxData(), pindexNew), pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());
+      syncProgress, pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());
     if (!warningMessages.empty())
         LogPrintf(" warning='%s'", warningMessages); /* Continued */
     LogPrintf("\n");
@@ -2938,8 +2948,16 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
     }
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
+    if (pindexNew->pprev){
+        pindexNew->nChainDelay = pindexNew->pprev->nChainDelay + GetBlockDelay(*pindexNew,*(pindexNew->pprev), chainActive.Height(), fIsStartupSyncing);
+    } else {
+        pindexNew->nChainDelay = 0 ;
+    }
+    if(pindexNew->nChainDelay != 0) {
+        LogPrintf("%s: Block belong to a chain under punishment Delay VAL: %i BLOCKHEIGHT: %d\n",__func__, pindexNew->nChainDelay, pindexNew->nHeight);
+    }
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
-    if (pindexBestHeader == nullptr || pindexBestHeader->nChainWork < pindexNew->nChainWork)
+    if (pindexBestHeader == nullptr || pindexBestHeader->nChainWork < pindexNew->nChainWork && pindexNew->nChainDelay==0)
         pindexBestHeader = pindexNew;
 
     setDirtyBlockIndex.insert(pindexNew);
@@ -3873,6 +3891,7 @@ bool CChainState::LoadBlockIndex(const Consensus::Params& consensus_params, CBlo
     {
         CBlockIndex* pindex = item.second;
         pindex->nChainWork = (pindex->pprev ? pindex->pprev->nChainWork : 0) + GetBlockProof(*pindex);
+        pindex->nChainDelay = 0 ;
         pindex->nTimeMax = (pindex->pprev ? std::max(pindex->pprev->nTimeMax, pindex->nTime) : pindex->nTime);
         // We can link the chain of blocks for which we've received transactions at some point.
         // Pruned nodes may have deleted the block.
