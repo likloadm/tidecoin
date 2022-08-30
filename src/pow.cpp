@@ -120,7 +120,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         }
     }
 
-    if (pindexLast->nTime+1 < params.nPowDGWTime) {
+    if (pindexLast->GetBlockTime() < params.nPowDGWTime) {
         return GetNextWorkRequiredBTC(pindexLast, pblock, params);
     }
 

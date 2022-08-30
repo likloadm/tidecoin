@@ -1747,7 +1747,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             return false;
         }
 
-        if (pindexBestHeader->nTime+1 >= chainparams.GetConsensus().nPowDGWTime && nVersion < DIFF_UPDATE_VERSION) {
+        if (pindexBestHeader->GetBlockTime() >= chainparams.GetConsensus().nPowDGWTime && nVersion < DIFF_UPDATE_VERSION) {
             // disconnect from peers older than this proto version
             LogPrint(BCLog::NET, "peer=%d using obsolete version %i; disconnecting\n", pfrom->GetId(), nVersion);
             if (enable_bip61) {
