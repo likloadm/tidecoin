@@ -1747,6 +1747,17 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             return false;
         }
 
+        if (pindexBestHeader->nTime+1 >= chainparams.GetConsensus().nPowDGWTime && nVersion < DIFF_UPDATE_VERSION) {
+            // disconnect from peers older than this proto version
+            LogPrint(BCLog::NET, "peer=%d using obsolete version %i; disconnecting\n", pfrom->GetId(), nVersion);
+            if (enable_bip61) {
+                connman->PushMessage(pfrom, CNetMsgMaker(INIT_PROTO_VERSION).Make(NetMsgType::REJECT, strCommand, REJECT_OBSOLETE,
+                                   strprintf("Version must be %d or greater", DIFF_UPDATE_VERSION)));
+            }
+            pfrom->fDisconnect = true;
+            return false;
+        }
+
         if (!vRecv.empty())
             vRecv >> addrFrom >> nNonce;
         if (!vRecv.empty()) {
