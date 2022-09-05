@@ -4556,6 +4556,7 @@ bool LoadBlockIndex(const CChainParams& chainparams)
 bool CChainState::LoadGenesisBlock(const CChainParams& chainparams)
 {
     LOCK(cs_main);
+    BlockSet sForkTips;
 
     // Check whether we're already initialized by checking for genesis in
     // mapBlockIndex. Note that we can't use chainActive here, since it is
@@ -4570,7 +4571,7 @@ bool CChainState::LoadGenesisBlock(const CChainParams& chainparams)
         if (blockPos.IsNull())
             return error("%s: writing genesis block to disk failed", __func__);
         CBlockIndex *pindex = AddToBlockIndex(block);
-        ReceivedBlockTransactions(block, pindex, blockPos, chainparams.GetConsensus());
+        ReceivedBlockTransactions(block, pindex, blockPos, chainparams.GetConsensus(), &sForkTips);
     } catch (const std::runtime_error& e) {
         return error("%s: failed to write genesis block: %s", __func__, e.what());
     }
