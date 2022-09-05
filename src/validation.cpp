@@ -2798,8 +2798,8 @@ bool CChainState::PreciousBlock(CValidationState& state, const CChainParams& par
             PruneBlockIndexCandidates();
         }
     }
-
-    return ActivateBestChain(state, params, std::shared_ptr<const CBlock>());
+    bool postponeRelay = false;
+    return ActivateBestChain(state, params, std::shared_ptr<const CBlock>(), postponeRelay);
 }
 bool PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex) {
     return g_chainstate.PreciousBlock(state, params, pindex);
@@ -4661,7 +4661,8 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                 // Activate the genesis block so normal node progress can continue
                 if (hash == chainparams.GetConsensus().hashGenesisBlock) {
                     CValidationState state;
-                    if (!ActivateBestChain(state, chainparams)) {
+                    bool postponeRelay = false;
+                    if (!ActivateBestChain(state, chainparams, postponeRelay)) {
                         break;
                     }
                 }
