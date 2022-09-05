@@ -3730,12 +3730,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
             if (chainActive.Height() > nodeHeight)
             {
                 {
-                    BOOST_FOREACH(CInv& inv, vInv)
-                    {
-                        LogPrint("forks", "%s():%d - Pushing inv to Node [%s] (id=%d) hash[%s]\n",
-                            __func__, __LINE__, pnode->addrName, pnode->GetId(), inv.hash.ToString() );
-                        pnode->PushInventory(inv);
-                    }
+                    g_connman->PushMessage(pnode, msgMaker.Make(NetMsgType::INV, vInv));
                 }
             }
         });
