@@ -3625,7 +3625,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     return true;
 }
 
-bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const CBlock> *pblock, BlockSet* sForkTips)
+bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const CBlock> pblock, BlockSet* sForkTips)
 {
     if (!pblock)
     {
@@ -4146,7 +4146,7 @@ bool LoadChainTip(const CChainParams& chainparams)
         // that we always have a chainActive.Tip() when we return.
         LogPrintf("%s: Connecting genesis block...\n", __func__);
         CValidationState state;
-        if (!ActivateBestChain(state, chainparams)) {
+        if (!ActivateBestChain(state, chainparams, false)) {
             LogPrintf("%s: failed to activate chain (%s)\n", __func__, FormatStateMessage(state));
             return false;
         }
@@ -4683,7 +4683,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                 if (hash == chainparams.GetConsensus().hashGenesisBlock) {
                     CValidationState state;
                     bool postponeRelay = false;
-                    if (!ActivateBestChain(state, chainparams, postponeRelay)) {
+                    if (!ActivateBestChain(state, chainparams, &postponeRelay)) {
                         break;
                     }
                 }
