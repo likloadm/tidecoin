@@ -3691,7 +3691,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
     // on the main chain
     if ( pindex->nChainTx <= 0 )
     {
-        LogPrint("forks", "%s():%d - Exiting: nChainTx=0\n", __func__, __LINE__);
+//        LogPrint("forks", "%s():%d - Exiting: nChainTx=0\n", __func__, __LINE__);
         return true;
     }
 
@@ -3701,8 +3701,8 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
 
     //dump_global_tips();
 
-    LogPrint("forks", "%s():%d - sForkTips(%d) - h[%d] %s\n",
-        __func__, __LINE__, sForkTips->size(), pindex->nHeight, pindex->GetBlockHash().ToString() );
+//    LogPrint("forks", "%s():%d - sForkTips(%d) - h[%d] %s\n",
+//        __func__, __LINE__, sForkTips->size(), pindex->nHeight, pindex->GetBlockHash().ToString() );
 
     std::vector<CInv> vInv;
 
