@@ -4147,7 +4147,7 @@ bool LoadChainTip(const CChainParams& chainparams)
         LogPrintf("%s: Connecting genesis block...\n", __func__);
         CValidationState state;
         bool postponeRelay = false;
-        if (!ActivateBestChain(state, chainparams, &postponeRelay)) {
+        if (!ActivateBestChain(state, chainparams, postponeRelay)) {
             LogPrintf("%s: failed to activate chain (%s)\n", __func__, FormatStateMessage(state));
             return false;
         }
