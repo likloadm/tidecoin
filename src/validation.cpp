@@ -25,6 +25,7 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
+#include <net.h>
 #include <reverse_iterator.h>
 #include <script/script.h>
 #include <script/sigcache.h>
@@ -3703,6 +3704,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
 
     std::vector<CInv> vInv;
 
+    vInv.push_back(CInv(MSG_BLOCK, chainActive.Tip()->GetBlockHash()));
     BOOST_FOREACH(const CBlockIndex* block, *sForkTips)
     {
         vInv.push_back(CInv(MSG_BLOCK, block->GetBlockHash()) );
