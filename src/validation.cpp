@@ -2790,8 +2790,8 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
     return true;
 }
 
-bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock, bool &postponeRelay) {
-    return g_chainstate.ActivateBestChain(state, chainparams, std::move(pblock), bool &postponeRelay);
+bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock) {
+    return g_chainstate.ActivateBestChain(state, chainparams, std::move(pblock));
 }
 
 bool CChainState::PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex)
@@ -3757,7 +3757,7 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
     bool postponeRelay = false;
 
     CValidationState state; // Only used to report errors, not invalidity - ignore it
-    if (!g_chainstate.ActivateBestChain(state, chainparams, pblock, postponeRelay))
+    if (!g_chainstate.ActivateBestChain(state, chainparams, pblock, &postponeRelay))
         return error("%s: ActivateBestChain failed (%s)", __func__, FormatStateMessage(state));
 
     if (!postponeRelay)
@@ -4147,7 +4147,7 @@ bool LoadChainTip(const CChainParams& chainparams)
         LogPrintf("%s: Connecting genesis block...\n", __func__);
         CValidationState state;
         bool postponeRelay = false;
-        if (!ActivateBestChain(state, chainparams, postponeRelay)) {
+        if (!ActivateBestChain(state, chainparams, &postponeRelay)) {
             LogPrintf("%s: failed to activate chain (%s)\n", __func__, FormatStateMessage(state));
             return false;
         }
