@@ -3718,7 +3718,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
     int nodeHeight = -1;
     if (nLocalServices & NODE_NETWORK) {
         LOCK(cs_vNodes);
-        g_connman->ForEachNode([](CNode* pnode) {
+        g_connman->ForEachNode([&vInv](CNode* pnode) {
             if (pnode->nStartingHeight != -1)
             {
                 nodeHeight = (pnode->nStartingHeight - 2000);
@@ -3730,7 +3730,12 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
             if (chainActive.Height() > nodeHeight)
             {
                 {
-                    g_connman->PushMessage(pnode, msgMaker.Make(NetMsgType::INV, vInv));
+                    BOOST_FOREACH(CInv& inv, vInv)
+                    {
+//                        LogPrint("forks", "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
+//                            __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
+                        pnode->PushInventory(inv);
+                    }
                 }
             }
         });
