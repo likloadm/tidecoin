@@ -3718,8 +3718,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
     int nodeHeight = -1;
     if (nLocalServices & NODE_NETWORK) {
         LOCK(cs_vNodes);
-        BOOST_FOREACH(CNode* pnode, vNodes)
-        {
+        g_connman->ForEachNode([](CNode* pnode) {
             if (pnode->nStartingHeight != -1)
             {
                 nodeHeight = (pnode->nStartingHeight - 2000);
@@ -3739,7 +3738,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
                     }
                 }
             }
-        }
+        });
     }
     return true;
 }
