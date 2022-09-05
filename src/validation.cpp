@@ -3015,9 +3015,9 @@ void CChainState::ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pi
                 if (sForkTips)
                 {
                     int num = sForkTips->erase(pindex->pprev);
-                    LogPrint("forks", "%s():%d - Adding idx to sForkTips: h(%d) [%s], nChainTx=%d, delay=%d, prev[%d]\n",
-                        __func__, __LINE__, pindex->nHeight, pindex->GetBlockHash().ToString(),
-                        pindex->nChainTx, pindex->nChainDelay, num);
+//                    LogPrint("forks", "%s():%d - Adding idx to sForkTips: h(%d) [%s], nChainTx=%d, delay=%d, prev[%d]\n",
+//                        __func__, __LINE__, pindex->nHeight, pindex->GetBlockHash().ToString(),
+//                        pindex->nChainTx, pindex->nChainDelay, num);
                     sForkTips->insert(pindex);
                 }
             }
