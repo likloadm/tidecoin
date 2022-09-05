@@ -2266,6 +2266,7 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
             AppendWarning(warningMessages, strprintf(_("%d of last 100 blocks have unexpected version"), nUpgraded));
     }
     double syncProgress = GuessVerificationProgress(chainParams.TxData(), pindexNew);
+    std::cout<<"syncProgress: "<<syncProgress<<std::endl;
     if(fIsStartupSyncing && std::abs(1.0 - syncProgress) < 0.000001) {
         LogPrintf("Fully synchronized at block height %d\n", pindexNew->nHeight);
         fIsStartupSyncing = false;
@@ -2950,6 +2951,7 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
     if (pindexNew->pprev){
+	std::cout<<"IS STARTUP: "<<fIsStartupSyncing<<std::endl;
         pindexNew->nChainDelay = pindexNew->pprev->nChainDelay + GetBlockDelay(*pindexNew,*(pindexNew->pprev), chainActive.Height(), fIsStartupSyncing);
     } else {
         pindexNew->nChainDelay = 0 ;
@@ -3892,7 +3894,7 @@ bool CChainState::LoadBlockIndex(const Consensus::Params& consensus_params, CBlo
     {
         CBlockIndex* pindex = item.second;
         pindex->nChainWork = (pindex->pprev ? pindex->pprev->nChainWork : 0) + GetBlockProof(*pindex);
-        pindex->nChainDelay = 0 ;
+        pindex->nChainDelay = 0;
         pindex->nTimeMax = (pindex->pprev ? std::max(pindex->pprev->nTimeMax, pindex->nTime) : pindex->nTime);
         // We can link the chain of blocks for which we've received transactions at some point.
         // Pruned nodes may have deleted the block.

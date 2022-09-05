@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <rpc/blockchain.h>
+#include <tdc/delay.h>
 
 #include <amount.h>
 #include <base58.h>
@@ -1399,12 +1400,20 @@ static UniValue getchaintips(const JSONRPCRequest& request)
             "    \"hash\": \"xxxx\",         (string) block hash of the tip\n"
             "    \"branchlen\": 0          (numeric) zero for main chain\n"
             "    \"status\": \"active\"      (string) \"active\" for the main chain\n"
+            "    \"penalty-at-start\": \"xxxx\"       (numeric, optional) penalty of the first block in the branch\n"
+            "    \"penalty-at-tip\": \"xxxx\"         (numeric, optional) penalty of the current tip of the branch\n"
+            "    \"blocks-to-mainchain\": \"xxxx\"    (numeric, optional) confirmations needed for current branch to become the active chain (capped to 2000) \n"
+            "  },\n"
+
             "  },\n"
             "  {\n"
             "    \"height\": xxxx,\n"
             "    \"hash\": \"xxxx\",\n"
             "    \"branchlen\": 1          (numeric) length of branch connecting the tip to the main chain\n"
             "    \"status\": \"xxxx\"        (string) status of the chain (active, valid-fork, valid-headers, headers-only, invalid)\n"
+            "    \"penalty-at-start\": \"xxxx\"       (numeric, optional) penalty of the first block in the branch\n"
+            "    \"penalty-at-tip\": \"xxxx\"         (numeric, optional) penalty of the current tip of the branch\n"
+            "    \"blocks-to-mainchain\": \"xxxx\"    (numeric, optional) confirmations needed for current branch to become the active chain (capped to 2000) \n"            
             "  }\n"
             "]\n"
             "Possible values for status:\n"
@@ -1484,10 +1493,82 @@ static UniValue getchaintips(const JSONRPCRequest& request)
         }
         obj.pushKV("status", status);
 
+        const CBlockIndex* pFirstBlockInBranch = block;
+        for(; pFirstBlockInBranch != nullptr && pFirstBlockInBranch->pprev != nullptr
+            && !chainActive.Contains(pFirstBlockInBranch->pprev);
+            pFirstBlockInBranch = pFirstBlockInBranch->pprev);
+            
+        obj.pushKV("penalty-at-start",    pFirstBlockInBranch->nChainDelay);
+        obj.pushKV("penalty-at-tip",      block->nChainDelay);
+        if (block == chainActive.Tip())
+            obj.pushKV("blocks-to-mainchain", 0);
+        else
+            obj.pushKV("blocks-to-mainchain", blocksToOvertakeTarget(block, chainActive.Tip()));        
+
         res.push_back(obj);
     }
 
     return res;
+}
+
+int64_t blocksToOvertakeTarget(const CBlockIndex* forkTip, const CBlockIndex* targetBlock)
+{
+    const int PENALTY_THRESHOLD = 5;
+    const int MAX_BLOCK_AGE_FOR_FINALITY=2000;
+    //this function assumes forkTip and targetBlock are non-null.
+    if (!chainActive.Contains(targetBlock))
+        return LLONG_MAX;
+
+    int64_t gap = 0;
+    const int targetBlockHeight = targetBlock->nHeight;
+    const int selectedTipHeight = forkTip->nHeight;
+    const int intersectionHeight = chainActive.FindFork(forkTip)->nHeight;
+
+    LogPrintf("forks: %s():%d - processing tip h(%d) [%s] forkBaseHeight[%d]\n",
+            __func__, __LINE__, forkTip->nHeight, forkTip->GetBlockHash().ToString(),
+            intersectionHeight);
+
+    // during a node's life, there might be many tips in the container, it is not useful
+    // keeping all of them into account for calculating the finality, just consider the most recent ones.
+    // Blocks are ordered by height, stop if we exceed a safe limit in depth, lets say the max age
+    if ((chainActive.Height() - selectedTipHeight) >= MAX_BLOCK_AGE_FOR_FINALITY) {
+        LogPrintf("forks: %s():%d - exiting loop on tips, max age reached: forkBaseHeight[%d], chain[%d]\n",
+                __func__, __LINE__, intersectionHeight, chainActive.Height());
+        gap = LLONG_MAX;
+    } else if (intersectionHeight < targetBlockHeight) {
+        // if the fork base is older than the input block, finality also depends on the current penalty
+        // ongoing on the fork
+        int64_t forkDelay = forkTip->nChainDelay;
+        if (selectedTipHeight >= chainActive.Height()) {
+            // if forkDelay is null one has to mine 1 block only
+            gap = forkDelay ? forkDelay : 1;
+            LogPrintf("forks: %s():%d - gap[%d], forkDelay[%d]\n", __func__,
+                    __LINE__, gap, forkDelay);
+        } else {
+            int64_t dt = chainActive.Height() - selectedTipHeight + 1;
+            dt = dt * (dt + 1) / 2;
+            gap = dt + forkDelay + 1;
+            LogPrintf("forks: %s():%d - gap[%d], forkDelay[%d], dt[%d]\n",
+                    __func__, __LINE__, gap, forkDelay, dt);
+        }
+    } else {
+        int64_t targetToTipDelta = chainActive.Height() - targetBlockHeight + 1;
+
+        // this also handles the main chain tip
+        if (targetToTipDelta < PENALTY_THRESHOLD + 1) {
+            // an attacker can mine from previous block up to tip + 1
+            gap = targetToTipDelta + 1;
+            LogPrintf("forks: %s():%d - gap[%d], delta[%d]\n", __func__,
+                    __LINE__, gap, targetToTipDelta);
+        } else {
+            // penalty applies
+            gap = (targetToTipDelta * (targetToTipDelta + 1) / 2);
+            LogPrintf("forks: %s():%d - gap[%d], delta[%d]\n", __func__,
+                    __LINE__, gap, targetToTipDelta);
+        }
+    }
+
+    return gap;
 }
 
 UniValue mempoolInfoToJSON()

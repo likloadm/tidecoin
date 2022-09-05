@@ -72,7 +72,8 @@ public:
         consensus.powLimit = uint256S("01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"); 
         consensus.nPowTargetTimespan = 5 * 24 * 60 * 60; // 5 day
         consensus.nPowTargetSpacing = 60;
-        consensus.nPowDGWTime = 1664500414;
+        //consensus.nPowDGWTime = 1664500414;
+        consensus.nPowDGWTime = 1665049702;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 6048; // 75% of 8064
@@ -102,7 +103,8 @@ public:
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
          */
-        pchMessageStart[0] = 0xec;
+        //pchMessageStart[0] = 0xec;
+        pchMessageStart[0] = 0xeb; // testchain
         pchMessageStart[1] = 0xfa;
         pchMessageStart[2] = 0xce;
         pchMessageStart[3] = 0xa5;
@@ -121,9 +123,9 @@ public:
         // This is fine at runtime as we'll fall back to using them as a oneshot if they don't support the
         // service bits we want, but we should get them updated to support all service bits wanted by any
         // release ASAP to avoid it where possible.
-        vSeeds.emplace_back("seed.tidecoin.co");
-        vSeeds.emplace_back("tidecoin.ddnsgeek.com");
-        vSeeds.emplace_back("tidecoin.theworkpc.com");
+        //vSeeds.emplace_back("seed.tidecoin.co");
+        //vSeeds.emplace_back("tidecoin.ddnsgeek.com");
+        //vSeeds.emplace_back("tidecoin.theworkpc.com");
         
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,33);
@@ -143,23 +145,23 @@ public:
 
         checkpointData = {
             {            
-              { 1500, uint256S("e588ef31c4ea967932fcd7b487b4a6e9ef2994417b95e84a920bf3d241689167")},
-              { 3000, uint256S("98f019517ad92d0221189b40c75f0e5ffe0367a61dfd03f668b3fccfb89fdb0a")},
-              { 9450, uint256S("c24419a117f4ed9c88ea21342f3f2b91bb549166e4417c8f315a323c1f7edfaf")},
-              { 14870, uint256S("fbb5bf51bcc94c56c172949709e72a888422cd521b07df7bda862df38b6a8697")},
-              { 50000, uint256S("d2ecd831d8540be5d022d817a359567b4dddf0c882ee910500120a3a3ed19efd")},
-              { 100000, uint256S("0dfb6c2b82b85ffce74239d78c49c4483de097f35a3f1401e4de0568a0eaff97")},
-              { 200000, uint256S("4e802ba65cbc855d549d01a9f55eddc35da3aeb21891f94c6fe7b80143df0f3f")},
-              { 220000, uint256S("8007f91d7b3187dba0603a05577297e33e9772cae212d5ffe376d9b65119155b")},
-              { 361470, uint256S("99769661a038d5d1b7901f0357a7177a208a8231aa7d040ea91f7772e2f6c917")},
+            //   { 1500, uint256S("e588ef31c4ea967932fcd7b487b4a6e9ef2994417b95e84a920bf3d241689167")},
+            //   { 3000, uint256S("98f019517ad92d0221189b40c75f0e5ffe0367a61dfd03f668b3fccfb89fdb0a")},
+            //   { 9450, uint256S("c24419a117f4ed9c88ea21342f3f2b91bb549166e4417c8f315a323c1f7edfaf")},
+            //   { 14870, uint256S("fbb5bf51bcc94c56c172949709e72a888422cd521b07df7bda862df38b6a8697")},
+            //   { 50000, uint256S("d2ecd831d8540be5d022d817a359567b4dddf0c882ee910500120a3a3ed19efd")},
+            //   { 100000, uint256S("0dfb6c2b82b85ffce74239d78c49c4483de097f35a3f1401e4de0568a0eaff97")},
+            //   { 200000, uint256S("4e802ba65cbc855d549d01a9f55eddc35da3aeb21891f94c6fe7b80143df0f3f")},
+            //   { 220000, uint256S("8007f91d7b3187dba0603a05577297e33e9772cae212d5ffe376d9b65119155b")},
+            //   { 361470, uint256S("99769661a038d5d1b7901f0357a7177a208a8231aa7d040ea91f7772e2f6c917")},
             }
         };
 
         chainTxData = ChainTxData{
             // Data from rpc: getchaintxstats 4096 2cdba8c47858d34cf0e02dfb8733263a3ed8705b1663ec7c158783d77b93e7ee
-            /* nTime    */ 1621410565,
-            /* nTxCount */ 283072,
-            /* dTxRate  */ 0.02080753988235224,
+            /* nTime    */ 0,//1621410565,
+            /* nTxCount */ 0,//283072,
+            /* dTxRate  */ 0,//0.02080753988235224,
         };
 
         /* disable fallback fee on mainnet */
