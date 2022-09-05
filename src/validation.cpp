@@ -3716,7 +3716,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
         nBlockEstimate = Checkpoints::GetTotalBlocksEstimate(chainParams.Checkpoints());
 
     int nodeHeight = -1;
-    if (nLocalServices & NODE_NETWORK) {
+    if (g_connman->GetLocalServices() & NODE_NETWORK) {
         g_connman->ForEachNode([&vInv, &nodeHeight, &nBlockEstimate](CNode* pnode) {
             if (pnode->nStartingHeight != -1)
             {
