@@ -2790,8 +2790,8 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
     return true;
 }
 
-bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock) {
-    return g_chainstate.ActivateBestChain(state, chainparams, std::move(pblock));
+bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock, bool &postponeRelay) {
+    return g_chainstate.ActivateBestChain(state, chainparams, std::move(pblock), bool &postponeRelay);
 }
 
 bool CChainState::PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex)
@@ -4706,8 +4706,8 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                                     head.ToString());
                             LOCK(cs_main);
                             CValidationState dummy;
-                            bool postponeRelay = false;
-                            if (g_chainstate.AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, nullptr, postponeRelay))
+                            BlockSet fBlocks = false;
+                            if (g_chainstate.AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, nullptr, fBlocks))
                             {
                                 nLoaded++;
                                 queue.push_back(pblockrecursive->GetHash());
