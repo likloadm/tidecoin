@@ -2791,7 +2791,7 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
 }
 
 bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock, bool &postponeRelay) {
-    return g_chainstate.ActivateBestChain(state, chainparams, std::move(pblock), bool &postponeRelay);
+    return g_chainstate.ActivateBestChain(state, chainparams, std::move(pblock), postponeRelay);
 }
 
 bool CChainState::PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex)
