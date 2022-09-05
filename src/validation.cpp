@@ -56,7 +56,7 @@
 
 #define MICRO 0.000001
 #define MILLI 0.001
-
+typedef std::set<const CBlockIndex*, CompareBlocksByHeight> BlockSet;
 /**
  * Global state
  */
@@ -246,7 +246,6 @@ bool fPruneMode = false;
 bool fIsBareMultisigStd = DEFAULT_PERMIT_BAREMULTISIG;
 bool fRequireStandard = true;
 bool fCheckBlockIndex = false;
-typedef std::set<const CBlockIndex*, CompareBlocksByHeight> BlockSet;
 bool fCheckpointsEnabled = DEFAULT_CHECKPOINTS_ENABLED;
 size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
@@ -3605,7 +3604,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     return true;
 }
 
-bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sForkTips)
+bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const CBlock> *pblock, BlockSet* sForkTips)
 {
     if (!pblock)
     {
