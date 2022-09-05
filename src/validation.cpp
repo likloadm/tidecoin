@@ -2979,7 +2979,7 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
 }
 
 /** Mark a block as having its data received and checked (up to BLOCK_VALID_TRANSACTIONS). */
-void CChainState::ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams)
+void CChainState::ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams, BlockSet* sForkTips)
 {
     pindexNew->nTx = block.vtx.size();
     pindexNew->nChainTx = 0;
@@ -3009,6 +3009,17 @@ void CChainState::ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pi
             }
             if (chainActive.Tip() == nullptr || !setBlockIndexCandidates.value_comp()(pindex, chainActive.Tip())) {
                 setBlockIndexCandidates.insert(pindex);
+            }
+            if (chainActive.Tip() == nullptr || !CBlockIndexRealWorkComparator()(pindex, chainActive.Tip()))
+            {
+                if (sForkTips)
+                {
+                    int num = sForkTips->erase(pindex->pprev);
+                    LogPrint("forks", "%s():%d - Adding idx to sForkTips: h(%d) [%s], nChainTx=%d, delay=%d, prev[%d]\n",
+                        __func__, __LINE__, pindex->nHeight, pindex->GetBlockHash().ToString(),
+                        pindex->nChainTx, pindex->nChainDelay, num);
+                    sForkTips->insert(pindex);
+                }
             }
             std::pair<std::multimap<CBlockIndex*, CBlockIndex*>::iterator, std::multimap<CBlockIndex*, CBlockIndex*>::iterator> range = mapBlocksUnlinked.equal_range(pindex);
             while (range.first != range.second) {
@@ -3515,7 +3526,7 @@ static CDiskBlockPos SaveBlockToDisk(const CBlock& block, int nHeight, const CCh
 }
 
 /** Store block on disk. If dbp is non-nullptr, the file is known to already reside on disk */
-bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock)
+bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock, BlockSet* sForkTips)
 {
     const CBlock& block = *pblock;
 
@@ -3582,7 +3593,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
             state.Error(strprintf("%s: Failed to find position to write new block to disk", __func__));
             return false;
         }
-        ReceivedBlockTransactions(block, pindex, blockPos, chainparams.GetConsensus());
+        ReceivedBlockTransactions(block, pindex, blockPos, chainparams.GetConsensus(), sForkTips);
     } catch (const std::runtime_error& e) {
         return AbortNode(state, std::string("System error: ") + e.what());
     }
@@ -3591,54 +3602,6 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 
     CheckBlockIndex(chainparams.GetConsensus());
 
-    return true;
-}
-
-bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock)
-{
-    AssertLockNotHeld(cs_main);
-
-    {
-        CBlockIndex *pindex = nullptr;
-        if (fNewBlock) *fNewBlock = false;
-        CValidationState state;
-
-        // CheckBlock() does not support multi-threaded block validation because CBlock::fChecked can cause data race.
-        // Therefore, the following critical section must include the CheckBlock() call as well.
-        LOCK(cs_main);
-
-        // Ensure that CheckBlock() passes before calling AcceptBlock, as
-        // belt-and-suspenders.
-        bool ret = CheckBlock(*pblock, state, chainparams.GetConsensus());
-        if (ret) {
-            // Store to disk
-            ret = g_chainstate.AcceptBlock(pblock, state, chainparams, &pindex, fForceProcessing, nullptr, fNewBlock);
-        }
-        if (!ret) {
-            GetMainSignals().BlockChecked(*pblock, state);
-            return error("%s: AcceptBlock FAILED (%s)", __func__, FormatStateMessage(state));
-        }
-    }
-
-    NotifyHeaderTip();
-
-    bool postponeRelay = false;
-
-    CValidationState state; // Only used to report errors, not invalidity - ignore it
-    if (!g_chainstate.ActivateBestChain(state, chainparams, pblock, postponeRelay))
-        return error("%s: ActivateBestChain failed (%s)", __func__, FormatStateMessage(state));
-
-    if (!postponeRelay)
-    {
-        if (!RelayAlternativeChain(state, pblock, &sForkTips))
-        {
-            return error("%s: RelayAlternativeChain failed", __func__);
-        }
-    }
-    else
-    {
-        LogPrint("net", "%s: Not relaying block %s\n", __func__, pblock->GetHash().ToString());
-    }
     return true;
 }
 
@@ -3739,6 +3702,54 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
                 }
             }
         });
+    }
+    return true;
+}
+
+bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock)
+{
+    AssertLockNotHeld(cs_main);
+    BlockSet sForkTips;
+    {
+        CBlockIndex *pindex = nullptr;
+        if (fNewBlock) *fNewBlock = false;
+        CValidationState state;
+
+        // CheckBlock() does not support multi-threaded block validation because CBlock::fChecked can cause data race.
+        // Therefore, the following critical section must include the CheckBlock() call as well.
+        LOCK(cs_main);
+
+        // Ensure that CheckBlock() passes before calling AcceptBlock, as
+        // belt-and-suspenders.
+        bool ret = CheckBlock(*pblock, state, chainparams.GetConsensus());
+        if (ret) {
+            // Store to disk
+            ret = g_chainstate.AcceptBlock(pblock, state, chainparams, &pindex, fForceProcessing, nullptr, fNewBlock, &sForkTips);
+        }
+        if (!ret) {
+            GetMainSignals().BlockChecked(*pblock, state);
+            return error("%s: AcceptBlock FAILED (%s)", __func__, FormatStateMessage(state));
+        }
+    }
+
+    NotifyHeaderTip();
+
+    bool postponeRelay = false;
+
+    CValidationState state; // Only used to report errors, not invalidity - ignore it
+    if (!g_chainstate.ActivateBestChain(state, chainparams, pblock, postponeRelay))
+        return error("%s: ActivateBestChain failed (%s)", __func__, FormatStateMessage(state));
+
+    if (!postponeRelay)
+    {
+        if (!RelayAlternativeChain(state, pblock, &sForkTips))
+        {
+            return error("%s: RelayAlternativeChain failed", __func__);
+        }
+    }
+    else
+    {
+//        LogPrint("net", "%s: Not relaying block %s\n", __func__, pblock->GetHash().ToString());
     }
     return true;
 }
