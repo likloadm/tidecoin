@@ -4707,8 +4707,8 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                                     head.ToString());
                             LOCK(cs_main);
                             CValidationState dummy;
-                            BlockSet fBlocks;
-                            if (g_chainstate.AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, nullptr, fBlocks))
+                            BlockSet sForkTips;
+                            if (g_chainstate.AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, nullptr, &sForkTips))
                             {
                                 nLoaded++;
                                 queue.push_back(pblockrecursive->GetHash());
