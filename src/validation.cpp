@@ -3717,7 +3717,6 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
 
     int nodeHeight = -1;
     if (nLocalServices & NODE_NETWORK) {
-        LOCK(cs_vNodes);
         g_connman->ForEachNode([&vInv, &nodeHeight, &nBlockEstimate](CNode* pnode) {
             if (pnode->nStartingHeight != -1)
             {
