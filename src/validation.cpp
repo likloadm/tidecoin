@@ -27,6 +27,7 @@
 #include <random.h>
 #include <net.h>
 #include <reverse_iterator.h>
+#include <blockchain.cpp>
 #include <script/script.h>
 #include <script/sigcache.h>
 #include <script/standard.h>
