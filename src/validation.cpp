@@ -3646,7 +3646,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
 {
     if (!pblock)
     {
-        LogPrint("forks", "%s():%d - Null pblock!\n", __func__, __LINE__);
+//        LogPrint("forks", "%s():%d - Null pblock!\n", __func__, __LINE__);
         return false;
     }
 
@@ -3670,7 +3670,7 @@ bool RelayAlternativeChain(CValidationState &state, CBlock *pblock, BlockSet* sF
 
     if (!pindex)
     {
-        LogPrint("forks", "%s():%d - Null pblock index!\n", __func__, __LINE__);
+//        LogPrint("forks", "%s():%d - Null pblock index!\n", __func__, __LINE__);
         return false;
     }
 
