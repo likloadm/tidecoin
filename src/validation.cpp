@@ -4671,7 +4671,6 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
 
                 // Recursively process earlier encountered successors of this block
                 std::deque<uint256> queue;
-                BlockSet sForkTips;
                 queue.push_back(hash);
                 while (!queue.empty()) {
                     uint256 head = queue.front();
