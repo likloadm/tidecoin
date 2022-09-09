@@ -133,7 +133,8 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
         }
         std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
         bool postponeRelay = false;
-        if (!ProcessNewBlock(Params(), shared_pblock, true, nullptr, postponeRelay))
+        BlockSet sForkTips;
+        if (!ProcessNewBlock(Params(), shared_pblock, true, nullptr, postponeRelay, sForkTips))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -754,7 +755,8 @@ static UniValue submitblock(const JSONRPCRequest& request)
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
     bool postponeRelay = false;
-    bool accepted = ProcessNewBlock(Params(), blockptr, /* fForceProcessing */ true, /* fNewBlock */ &new_block, postponeRelay);
+    BlockSet sForkTips;
+    bool accepted = ProcessNewBlock(Params(), blockptr, /* fForceProcessing */ true, /* fNewBlock */ &new_block, postponeRelay, sForkTips);
     UnregisterValidationInterface(&sc);
     if (!new_block && accepted) {
         return "duplicate";
