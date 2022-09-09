@@ -20,6 +20,7 @@
 #include <sync.h>
 #include <versionbits.h>
 #include <net.h>
+#include <univalue.h>
 
 #include <algorithm>
 #include <exception>
