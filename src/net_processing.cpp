@@ -677,7 +677,9 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
 
     std::vector<CInv> vInv;
 
-    BOOST_FOREACH(const CBlockIndex* block, *sForkTips)
+//    BOOST_FOREACH(const CBlockIndex* block, *sForkTips)
+//    {
+    for (const auto& block : *sForkTips)
     {
         vInv.push_back(CInv(MSG_BLOCK, block->GetBlockHash()) );
     }
