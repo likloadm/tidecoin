@@ -20,13 +20,6 @@
 #include <sync.h>
 #include <versionbits.h>
 
-
-#include <core_io.h>
-#include <net.h>
-#include <net_processing.h>
-#include <netbase.h>
-#include <univalue.h>
-
 #include <algorithm>
 #include <exception>
 #include <map>
@@ -53,6 +46,8 @@ struct ChainTxData;
 
 struct PrecomputedTransactionData;
 struct LockPoints;
+
+extern std::unique_ptr<CConnman> g_connman;
 
 /** Default for -whitelistrelay. */
 static const bool DEFAULT_WHITELISTRELAY = true;
