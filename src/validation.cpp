@@ -27,7 +27,6 @@
 #include <random.h>
 #include <net.h>
 #include <reverse_iterator.h>
-#include <rpc/blockchain.cpp>
 #include <script/script.h>
 #include <script/sigcache.h>
 #include <script/standard.h>
@@ -56,6 +55,21 @@
 
 #define MICRO 0.000001
 #define MILLI 0.001
+
+struct CompareBlocksByHeight
+{
+    bool operator()(const CBlockIndex* a, const CBlockIndex* b) const
+    {
+        /* Make sure that unequal blocks with the same height do not compare
+           equal. Use the pointers themselves to make a distinction. */
+
+        if (a->nHeight != b->nHeight)
+          return (a->nHeight > b->nHeight);
+
+        return a < b;
+    }
+};
+
 typedef std::set<const CBlockIndex*, CompareBlocksByHeight> BlockSet;
 /**
  * Global state
