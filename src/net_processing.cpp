@@ -2729,7 +2729,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             // compact blocks with less work than our tip, it is safe to treat
             // reconstructed compact blocks as having been requested.
             bool postponeRelay = false;
-            ProcessNewBlock(chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock, postponeRelay);
+            BlockSet sForkTips;
+            ProcessNewBlock(chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock, postponeRelay, sForkTips);
             if (!postponeRelay)
             {
                 if (!RelayAlternativeChain(state, pblock, &sForkTips))
@@ -2824,7 +2825,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             // protections in the compact block handler -- see related comment
             // in compact block optimistic reconstruction handling.
             bool postponeRelay = false;
-            ProcessNewBlock(chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock, postponeRelay);
+            BlockSet sForkTips;
+            ProcessNewBlock(chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock, postponeRelay, sForkTips);
             if (!postponeRelay)
             {
                 if (!RelayAlternativeChain(state, pblock, &sForkTips))
@@ -2891,7 +2893,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
         bool fNewBlock = false;
         bool postponeRelay = false;
-        ProcessNewBlock(chainparams, pblock, forceProcessing, &fNewBlock, postponeRelay);
+        BlockSet sForkTips;
+        ProcessNewBlock(chainparams, pblock, forceProcessing, &fNewBlock, postponeRelay, sForkTips);
         if (!postponeRelay)
             {
                 if (!RelayAlternativeChain(state, pblock, &sForkTips))

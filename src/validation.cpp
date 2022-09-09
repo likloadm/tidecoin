@@ -3643,10 +3643,9 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 }
 
 
-bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock, bool &postponeRelay)
+bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock, bool &postponeRelay, BlockSet &sForkTips)
 {
     AssertLockNotHeld(cs_main);
-    BlockSet sForkTips;
     {
         CBlockIndex *pindex = nullptr;
         if (fNewBlock) *fNewBlock = false;
