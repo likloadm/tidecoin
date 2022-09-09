@@ -679,25 +679,25 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
     int nodeHeight = -1;
     if (g_connman->GetLocalServices() & NODE_NETWORK) {
         g_connman->ForEachNode([&vInv, &nodeHeight, &nBlockEstimate](CNode* pnode) {
-//            if (pnode->nStartingHeight != -1)
-//            {
-//                nodeHeight = (pnode->nStartingHeight - 2000);
-//            }
-//            else
-//            {
-//                nodeHeight = nBlockEstimate;
-//            }
-//            if (chainActive.Height() > nodeHeight)
-//            {
-//                {
-//                    BOOST_FOREACH(CInv& inv, vInv)
-//                    {
-////                        LogPrint("forks", "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
-////                            __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
-//                        pnode->PushInventory(inv);
-//                    }
-//                }
-//            }
+            if (pnode->nStartingHeight != -1)
+            {
+                nodeHeight = (pnode->nStartingHeight - 2000);
+            }
+            else
+            {
+                nodeHeight = nBlockEstimate;
+            }
+            if (chainActive.Height() > nodeHeight)
+            {
+                {
+                    BOOST_FOREACH(CInv& inv, vInv)
+                    {
+//                        LogPrint("forks", "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
+//                            __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
+                        pnode->PushInventory(inv);
+                    }
+                }
+            }
         });
     }
     return true;
