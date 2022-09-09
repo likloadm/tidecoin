@@ -604,18 +604,18 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
 {
     if (!pblock)
     {
-//        LogPrint("forks", "%s():%d - Null pblock!\n", __func__, __LINE__);
+        LogPrint(BCLog::NET, "%s():%d - Null pblock!\n", __func__, __LINE__);
         return false;
     }
 
     const CChainParams& chainParams = Params();
     uint256 hashAlternativeTip = pblock->GetHash();
-    //LogPrint("forks", "%s():%d - Entering with hash[%s]\n", __func__, __LINE__, hashAlternativeTip.ToString() );
+    LogPrint(BCLog::NET, "%s():%d - Entering with hash[%s]\n", __func__, __LINE__, hashAlternativeTip.ToString());
 
     // 1. check this is the best chain tip, in this case exit
     if (chainActive.Tip()->GetBlockHash() == hashAlternativeTip)
     {
-        //LogPrint("forks", "%s():%d - Exiting: already best tip\n", __func__, __LINE__);
+        LogPrint(BCLog::NET, "%s():%d - Exiting: already best tip\n", __func__, __LINE__);
         return true;
     }
 
@@ -628,14 +628,14 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
 
     if (!pindex)
     {
-//        LogPrint("forks", "%s():%d - Null pblock index!\n", __func__, __LINE__);
+        LogPrint(BCLog::NET, "%s():%d - Null pblock index!\n", __func__, __LINE__);
         return false;
     }
 
     // 2. check this block is a fork from best chain, otherwise exit
     if (chainActive.Contains(pindex))
     {
-        //LogPrint("forks", "%s():%d - Exiting: it belongs to main chain\n", __func__, __LINE__);
+        LogPrint(BCLog::NET, "%s():%d - Exiting: it belongs to main chain\n", __func__, __LINE__);
         return true;
     }
 
@@ -649,7 +649,7 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
     // on the main chain
     if ( pindex->nChainTx <= 0 )
     {
-//        LogPrint("forks", "%s():%d - Exiting: nChainTx=0\n", __func__, __LINE__);
+        LogPrint(BCLog::NET, "%s():%d - Exiting: nChainTx=0\n", __func__, __LINE__);
         return true;
     }
 
@@ -659,8 +659,8 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
 
     //dump_global_tips();
 
-//    LogPrint("forks", "%s():%d - sForkTips(%d) - h[%d] %s\n",
-//        __func__, __LINE__, sForkTips->size(), pindex->nHeight, pindex->GetBlockHash().ToString() );
+    LogPrint(BCLog::NET, "%s():%d - sForkTips(%d) - h[%d] %s\n",
+        __func__, __LINE__, sForkTips->size(), pindex->nHeight, pindex->GetBlockHash().ToString() );
 
     std::vector<CInv> vInv;
 
@@ -693,8 +693,8 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
                     {
                         for (const auto& inv : vInv)
                         {
-    //                        LogPrint("forks", "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
-    //                            __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
+                            LogPrint(BCLog::NET, "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
+                                __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
                             pnode->PushInventory(inv);
                         }
                     }
