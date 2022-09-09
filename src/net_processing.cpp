@@ -94,7 +94,7 @@ static constexpr unsigned int INVENTORY_BROADCAST_MAX = 7 * INVENTORY_BROADCAST_
 static constexpr unsigned int AVG_FEEFILTER_BROADCAST_INTERVAL = 10 * 60;
 /** Maximum feefilter broadcast delay after significant change. */
 static constexpr unsigned int MAX_FEEFILTER_CHANGE_DELAY = 5 * 60;
-
+typedef std::set<const CBlockIndex*, CompareBlocksByHeight> BlockSet;
 // Internal stuff
 namespace {
     /** Number of nodes with fSyncStarted. */
