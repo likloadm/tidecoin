@@ -29,6 +29,8 @@
 #include <util/system.h>
 #include <util/moneystr.h>
 #include <util/strencodings.h>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/thread.hpp>
 
 #include <memory>
 
