@@ -755,17 +755,6 @@ static UniValue submitblock(const JSONRPCRequest& request)
     RegisterValidationInterface(&sc);
     bool postponeRelay = false;
     bool accepted = ProcessNewBlock(Params(), blockptr, /* fForceProcessing */ true, /* fNewBlock */ &new_block, postponeRelay);
-    if (!postponeRelay)
-    {
-        if (!RelayAlternativeChain(state, pblock, &sForkTips))
-        {
-            return error("%s: RelayAlternativeChain failed", __func__);
-        }
-    }
-    else
-    {
-//        LogPrint("net", "%s: Not relaying block %s\n", __func__, pblock->GetHash().ToString());
-    }
     UnregisterValidationInterface(&sc);
     if (!new_block && accepted) {
         return "duplicate";
