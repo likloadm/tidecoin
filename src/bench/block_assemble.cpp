@@ -45,8 +45,8 @@ static CTxIn MineBlock(const CScript& coinbase_scriptPubKey)
         ++block->nNonce;
         assert(block->nNonce);
     }
-
-    bool processed{ProcessNewBlock(Params(), block, true, nullptr)};
+    bool postponeRelay = false;
+    bool processed{ProcessNewBlock(Params(), block, true, nullptr, postponeRelay)};
     assert(processed);
 
     return CTxIn{block->vtx[0]->GetHash(), 0};

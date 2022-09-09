@@ -3743,7 +3743,7 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
     return true;
 }
 
-bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock)
+bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock, bool &postponeRelay)
 {
     AssertLockNotHeld(cs_main);
     BlockSet sForkTips;
@@ -3771,23 +3771,10 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
 
     NotifyHeaderTip();
 
-    bool postponeRelay = false;
-
     CValidationState state; // Only used to report errors, not invalidity - ignore it
     if (!g_chainstate.ActivateBestChain(state, chainparams, pblock, postponeRelay))
         return error("%s: ActivateBestChain failed (%s)", __func__, FormatStateMessage(state));
 
-    if (!postponeRelay)
-    {
-        if (!RelayAlternativeChain(state, pblock, &sForkTips))
-        {
-            return error("%s: RelayAlternativeChain failed", __func__);
-        }
-    }
-    else
-    {
-//        LogPrint("net", "%s: Not relaying block %s\n", __func__, pblock->GetHash().ToString());
-    }
     return true;
 }
 
