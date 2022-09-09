@@ -19,7 +19,12 @@
 #include <script/script_error.h>
 #include <sync.h>
 #include <versionbits.h>
+
+
+#include <core_io.h>
 #include <net.h>
+#include <net_processing.h>
+#include <netbase.h>
 #include <univalue.h>
 
 #include <algorithm>
