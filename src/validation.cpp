@@ -3625,7 +3625,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     return true;
 }
 
-bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const CBlock> *pblock, BlockSet* sForkTips)
+bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const CBlock> pblock, BlockSet* sForkTips)
 {
     if (!pblock)
     {
