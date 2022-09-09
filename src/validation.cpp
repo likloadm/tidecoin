@@ -2291,7 +2291,6 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
             AppendWarning(warningMessages, strprintf(_("%d of last 100 blocks have unexpected version"), nUpgraded));
     }
     double syncProgress = GuessVerificationProgress(chainParams.TxData(), pindexNew);
-    std::cout<<"syncProgress: "<<syncProgress<<std::endl;
     if(fIsStartupSyncing && std::abs(1.0 - syncProgress) < 0.000001) {
         LogPrintf("Fully synchronized at block height %d\n", pindexNew->nHeight);
         fIsStartupSyncing = false;
