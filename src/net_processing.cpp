@@ -2736,6 +2736,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             bool postponeRelay = false;
             BlockSet sForkTips;
             ProcessNewBlock(chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock, postponeRelay, sForkTips);
+            CValidationState state; // Only used to report errors, not invalidity - ignore it
             if (!postponeRelay)
             {
                 if (!RelayAlternativeChain(state, pblock, &sForkTips))
@@ -2832,6 +2833,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             bool postponeRelay = false;
             BlockSet sForkTips;
             ProcessNewBlock(chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock, postponeRelay, sForkTips);
+            CValidationState state; // Only used to report errors, not invalidity - ignore it
             if (!postponeRelay)
             {
                 if (!RelayAlternativeChain(state, pblock, &sForkTips))
@@ -2900,6 +2902,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         bool postponeRelay = false;
         BlockSet sForkTips;
         ProcessNewBlock(chainparams, pblock, forceProcessing, &fNewBlock, postponeRelay, sForkTips);
+        CValidationState state; // Only used to report errors, not invalidity - ignore it
         if (!postponeRelay)
             {
                 if (!RelayAlternativeChain(state, pblock, &sForkTips))
