@@ -291,6 +291,7 @@ libbitcoin_server_a_SOURCES = \
   validation.cpp \
   validationinterface.cpp \
   versionbits.cpp \
+  $(LIBUNIVALUE) \
   $(BITCOIN_CORE_H)
 
 if !ENABLE_WALLET
