@@ -31,6 +31,7 @@
 #include <util/strencodings.h>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/thread.hpp>
+#include <checkpoints.h>
 
 #include <memory>
 
