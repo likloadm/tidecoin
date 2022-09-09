@@ -690,13 +690,13 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
             if (chainActive.Height() > nodeHeight)
             {
                 {
-
                     {
-                    for (const auto& inv : vInv)
-                    {
-//                        LogPrint("forks", "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
-//                            __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
-                        pnode->PushInventory(inv);
+                        for (const auto& inv : *vInv)
+                        {
+    //                        LogPrint("forks", "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
+    //                            __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
+                            pnode->PushInventory(inv);
+                        }
                     }
                 }
             }
