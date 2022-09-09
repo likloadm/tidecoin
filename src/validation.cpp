@@ -4565,6 +4565,7 @@ bool CChainState::LoadGenesisBlock(const CChainParams& chainparams)
     if (mapBlockIndex.count(chainparams.GenesisBlock().GetHash()))
         return true;
 
+
     try {
         const CBlock& block = chainparams.GenesisBlock();
         CDiskBlockPos blockPos = SaveBlockToDisk(block, 0, chainparams, nullptr);
