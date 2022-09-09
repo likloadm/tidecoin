@@ -8,6 +8,8 @@
 #include <logging.h>
 #include "tinyformat.h"
 #include <boost/foreach.hpp>
+#include <consensus/validation.h>
 
 int GetBlockDelay (const CBlockIndex& newBlock,const CBlockIndex& prevBlock, const int activeChainHeight, bool isStartupSyncing);
 bool IsChainPenalised (const CChain& chain);
+bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const CBlock> pblock, BlockSet* sForkTips)
