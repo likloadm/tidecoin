@@ -25,7 +25,7 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
-#include <net.h>
+//#include <net.h>
 #include <reverse_iterator.h>
 #include <script/script.h>
 #include <script/sigcache.h>
