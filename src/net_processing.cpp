@@ -691,7 +691,7 @@ bool RelayAlternativeChain(CValidationState &state, const std::shared_ptr<const 
             {
                 {
                     {
-                        for (const auto& inv : *vInv)
+                        for (const auto& inv : vInv)
                         {
     //                        LogPrint("forks", "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
     //                            __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
