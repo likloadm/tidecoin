@@ -8,6 +8,8 @@
 
 #include <primitives/transaction.h> // CTransaction(Ref)
 #include <sync.h>
+#include <protocol.h>
+
 
 #include <functional>
 #include <memory>
@@ -87,6 +89,20 @@ protected:
      * Called on a background thread.
      */
     virtual void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) {}
+    /**
+     * Notifies listeners on new forks in progress
+     *
+     *
+     * Called on a background thread.
+     */
+    virtual void UpdatedForksTips(uint256 hashNewTip, int nBlockEstimate, bool fInitialDownload) {}
+    /**
+     * Relay Alternative Chains
+     *
+     *
+     * Called on a background thread.
+     */
+    virtual void RelayAltChain(const std::vector<CInv> &vInv) {}
     /**
      * Notifies listeners of a transaction having been added to mempool.
      *
@@ -180,6 +196,8 @@ public:
     void UnregisterWithMempoolSignals(CTxMemPool& pool);
 
     void UpdatedBlockTip(const CBlockIndex *, const CBlockIndex *, bool fInitialDownload);
+    void UpdatedForksTips(uint256 hashNewTip, int nBlockEstimate, bool fInitialDownload);
+    void RelayAltChain(const std::vector<CInv> &);
     void TransactionAddedToMempool(const CTransactionRef &);
     void BlockConnected(const std::shared_ptr<const CBlock> &, const CBlockIndex *pindex, const std::shared_ptr<const std::vector<CTransactionRef>> &);
     void BlockDisconnected(const std::shared_ptr<const CBlock> &);

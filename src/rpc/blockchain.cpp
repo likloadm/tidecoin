@@ -1370,20 +1370,6 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
     return obj;
 }
 
-/** Comparison function for sorting the getchaintips heads.  */
-struct CompareBlocksByHeight
-{
-    bool operator()(const CBlockIndex* a, const CBlockIndex* b) const
-    {
-        /* Make sure that unequal blocks with the same height do not compare
-           equal. Use the pointers themselves to make a distinction. */
-
-        if (a->nHeight != b->nHeight)
-          return (a->nHeight > b->nHeight);
-
-        return a < b;
-    }
-};
 
 static UniValue getchaintips(const JSONRPCRequest& request)
 {
@@ -1668,6 +1654,7 @@ static UniValue invalidateblock(const JSONRPCRequest& request)
 
     uint256 hash(ParseHashV(request.params[0], "blockhash"));
     CValidationState state;
+    bool postPoneRelay=false;
 
     CBlockIndex* pblockindex;
     {
@@ -1680,7 +1667,7 @@ static UniValue invalidateblock(const JSONRPCRequest& request)
     InvalidateBlock(state, Params(), pblockindex);
 
     if (state.IsValid()) {
-        ActivateBestChain(state, Params());
+        ActivateBestChain(state, Params(), postPoneRelay);
     }
 
     if (!state.IsValid()) {
@@ -1720,7 +1707,8 @@ static UniValue reconsiderblock(const JSONRPCRequest& request)
     }
 
     CValidationState state;
-    ActivateBestChain(state, Params());
+    bool postPoneRelay=false;
+    ActivateBestChain(state, Params(), postPoneRelay);
 
     if (!state.IsValid()) {
         throw JSONRPCError(RPC_DATABASE_ERROR, FormatStateMessage(state));

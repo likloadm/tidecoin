@@ -10,7 +10,7 @@
 #include <txmempool.h>
 #include <util/system.h>
 #include <validation.h>
-
+#include <protocol.h> 
 #include <list>
 #include <atomic>
 #include <future>
@@ -20,6 +20,8 @@
 
 struct ValidationInterfaceConnections {
     boost::signals2::scoped_connection UpdatedBlockTip;
+    boost::signals2::scoped_connection UpdatedForksTips;
+    boost::signals2::scoped_connection RelayAltChain;
     boost::signals2::scoped_connection TransactionAddedToMempool;
     boost::signals2::scoped_connection BlockConnected;
     boost::signals2::scoped_connection BlockDisconnected;
@@ -32,6 +34,8 @@ struct ValidationInterfaceConnections {
 
 struct MainSignalsInstance {
     boost::signals2::signal<void (const CBlockIndex *, const CBlockIndex *, bool fInitialDownload)> UpdatedBlockTip;
+    boost::signals2::signal<void (uint256 hashNewTip, int nBlockEstimate, bool fInitialDownload)> UpdatedForksTips;
+    boost::signals2::signal<void (const std::vector<CInv>& vInv)> RelayAltChain;
     boost::signals2::signal<void (const CTransactionRef &)> TransactionAddedToMempool;
     boost::signals2::signal<void (const std::shared_ptr<const CBlock> &, const CBlockIndex *pindex, const std::vector<CTransactionRef>&)> BlockConnected;
     boost::signals2::signal<void (const std::shared_ptr<const CBlock> &)> BlockDisconnected;
@@ -96,6 +100,8 @@ CMainSignals& GetMainSignals()
 void RegisterValidationInterface(CValidationInterface* pwalletIn) {
     ValidationInterfaceConnections& conns = g_signals.m_internals->m_connMainSignals[pwalletIn];
     conns.UpdatedBlockTip = g_signals.m_internals->UpdatedBlockTip.connect(std::bind(&CValidationInterface::UpdatedBlockTip, pwalletIn, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    conns.UpdatedForksTips = g_signals.m_internals->UpdatedForksTips.connect(std::bind(&CValidationInterface::UpdatedForksTips, pwalletIn, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    conns.RelayAltChain = g_signals.m_internals->RelayAltChain.connect(std::bind(&CValidationInterface::RelayAltChain, pwalletIn, std::placeholders::_1));
     conns.TransactionAddedToMempool = g_signals.m_internals->TransactionAddedToMempool.connect(std::bind(&CValidationInterface::TransactionAddedToMempool, pwalletIn, std::placeholders::_1));
     conns.BlockConnected = g_signals.m_internals->BlockConnected.connect(std::bind(&CValidationInterface::BlockConnected, pwalletIn, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     conns.BlockDisconnected = g_signals.m_internals->BlockDisconnected.connect(std::bind(&CValidationInterface::BlockDisconnected, pwalletIn, std::placeholders::_1));
@@ -148,6 +154,26 @@ void CMainSignals::UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockInd
 
     m_internals->m_schedulerClient.AddToProcessQueue([pindexNew, pindexFork, fInitialDownload, this] {
         m_internals->UpdatedBlockTip(pindexNew, pindexFork, fInitialDownload);
+    });
+}
+
+void CMainSignals::UpdatedForksTips(uint256 hashNewTip, int nBlockEstimate, bool fInitialDownload) {
+    // Dependencies exist that require UpdatedBlockTip events to be delivered in the order in which
+    // the chain actually updates. One way to ensure this is for the caller to invoke this signal
+    // in the same critical section where the chain is updated
+
+    m_internals->m_schedulerClient.AddToProcessQueue([hashNewTip, nBlockEstimate, fInitialDownload, this] {
+        m_internals->UpdatedForksTips(hashNewTip, nBlockEstimate, fInitialDownload);
+    });
+}
+
+void CMainSignals::RelayAltChain(const std::vector<CInv> &vInv) {
+    // Dependencies exist that require UpdatedBlockTip events to be delivered in the order in which
+    // the chain actually updates. One way to ensure this is for the caller to invoke this signal
+    // in the same critical section where the chain is updated
+
+    m_internals->m_schedulerClient.AddToProcessQueue([vInv, this] {
+        m_internals->RelayAltChain(vInv);
     });
 }
 

@@ -73,7 +73,7 @@ public:
         consensus.nPowTargetTimespan = 5 * 24 * 60 * 60; // 5 day
         consensus.nPowTargetSpacing = 60;
         //consensus.nPowDGWTime = 1664500414;
-        consensus.nPowDGWTime = 1665049702;
+        consensus.nPowDGWTime = 1666049702;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 6048; // 75% of 8064

@@ -30,6 +30,13 @@
 #include <util/moneystr.h>
 #include <util/strencodings.h>
 
+#include <boost/thread.hpp>
+#include <boost/foreach.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <vector>
+
+#include <atomic>
+
 #include <memory>
 
 #if defined(NDEBUG)
@@ -439,6 +446,8 @@ static void UpdateBlockAvailability(NodeId nodeid, const uint256 &hash) EXCLUSIV
         state->hashLastUnknownBlock = hash;
     }
 }
+
+
 
 /**
  * When a peer sends us a valid block, instruct it to announce blocks to us
@@ -995,6 +1004,76 @@ void PeerLogicValidation::UpdatedBlockTip(const CBlockIndex *pindexNew, const CB
     nTimeBestReceived = GetTime();
 }
 
+
+
+/**
+ * Update forks tips.
+ */
+void PeerLogicValidation::UpdatedForksTips(uint256 hashNewTip, int nBlockEstimate, bool fInitialDownload) {    
+    SetServiceFlagsIBDCache(!fInitialDownload);
+    if (!fInitialDownload) {
+        // Relay inventory
+        connman->ForEachNode([hashNewTip,nBlockEstimate](CNode* pnode) {
+                    std::cout<<"UFT: hashNewTip: "<<hashNewTip.ToString()<<" nBlockEstimate: " << nBlockEstimate << std::endl;
+                    if (chainActive.Height() > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate))
+                    {
+                        pnode->PushInventory(CInv(MSG_BLOCK, hashNewTip));
+                    }
+                    else
+                    {
+                        LogPrint(BCLog::ALL, "%s():%d - Node (peer=%d) NOT pushing inv [%s] - hM[%d], hS[%d], nB[%d]\n",
+                            __func__, __LINE__, pnode->GetId(), hashNewTip.ToString(),
+                            chainActive.Height(), pnode->nStartingHeight, nBlockEstimate);
+                    }
+        });
+        connman->WakeMessageHandler();
+    }
+
+    nTimeBestReceived = GetTime();
+}
+
+/**
+ * Update forks tips.
+ */
+void PeerLogicValidation::RelayAltChain(const std::vector<CInv>& vInv) {
+
+    int nodeHeight = -1;
+    std::cout<<"RelayAltChain"<<std::endl;
+
+    connman->ForEachNode([&nodeHeight, vInv](CNode* pnode) {
+            if (pnode->nStartingHeight != -1)
+            {
+                nodeHeight = (pnode->nStartingHeight - 2000);
+            }
+            else
+            {
+                nodeHeight = 0;
+            }
+
+            std::cout<<"nodeHeight: "<<nodeHeight<<" chainActive.Height: "<<chainActive.Height()<<std::endl;
+
+            if (chainActive.Height() > nodeHeight)
+            {
+                {
+                    BOOST_FOREACH(CInv inv, vInv)
+                    {
+                        LogPrint(BCLog::ALL, "%s():%d - Pushing inv to Node (id=%d) hash[%s]\n",
+                            __func__, __LINE__, pnode->GetId(), inv.hash.ToString() );
+                        
+                        std::cout<<"RAC: INV: "<<inv.hash.ToString()<<std::endl;
+                        pnode->PushInventory(inv);
+                    }
+                }
+            }
+
+
+        });
+    connman->WakeMessageHandler();
+
+
+
+}
+
 /**
  * Handle invalid block rejection and consequent peer banning, maintain which
  * peers announce compact blocks.
@@ -1151,7 +1230,8 @@ void static ProcessGetBlockData(CNode* pfrom, const CChainParams& chainparams, c
     } // release cs_main before calling ActivateBestChain
     if (need_activate_chain) {
         CValidationState state;
-        if (!ActivateBestChain(state, Params(), a_recent_block)) {
+        bool postPoneRelay=false;
+        if (!ActivateBestChain(state, Params(), postPoneRelay, a_recent_block)) {
             LogPrint(BCLog::NET, "failed to activate chain (%s)\n", FormatStateMessage(state));
         }
     }
@@ -2115,7 +2195,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 a_recent_block = most_recent_block;
             }
             CValidationState state;
-            if (!ActivateBestChain(state, Params(), a_recent_block)) {
+            bool postPoneRelay=false;
+            if (!ActivateBestChain(state, Params(), postPoneRelay, a_recent_block)) {
                 LogPrint(BCLog::NET, "failed to activate chain (%s)\n", FormatStateMessage(state));
             }
         }

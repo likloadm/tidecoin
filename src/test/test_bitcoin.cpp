@@ -86,7 +86,8 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
         }
         {
             CValidationState state;
-            if (!ActivateBestChain(state, chainparams)) {
+            bool postPoneRelay=false;
+            if (!ActivateBestChain(state, chainparams, postPoneRelay)) {
                 throw std::runtime_error(strprintf("ActivateBestChain failed. (%s)", FormatStateMessage(state)));
             }
         }

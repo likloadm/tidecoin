@@ -40,6 +40,14 @@ public:
     /**
      * Overridden from CValidationInterface.
      */
+    void UpdatedForksTips(uint256 hashNewTip, int nBlockEstimate, bool fInitialDownload) override;
+    /**
+     * Overridden from CValidationInterface.
+     */
+    void RelayAltChain(const std::vector<CInv>& vInv) override;    
+    /**
+     * Overridden from CValidationInterface.
+     */
     void BlockChecked(const CBlock& block, const CValidationState& state) override;
     /**
      * Overridden from CValidationInterface.

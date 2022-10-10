@@ -145,6 +145,30 @@ struct BlockHasher
     size_t operator()(const uint256& hash) const { return ReadLE64(hash.begin()); }
 };
 
+
+/** Comparison function for sorting the getchaintips heads.  */
+struct CompareBlocksByHeight
+{
+    bool operator()(const CBlockIndex* a, const CBlockIndex* b) const
+    {
+        /* Make sure that unequal blocks with the same height do not compare
+           equal. Use the pointers themselves to make a distinction. */
+
+        if (a->nHeight != b->nHeight)
+          return (a->nHeight > b->nHeight);
+
+        return a < b;
+    }
+};
+
+// FORK TIPS
+typedef std::set<const CBlockIndex*, CompareBlocksByHeight> BlockSet;
+typedef std::map<const CBlockIndex*, int, CompareBlocksByHeight> BlockTimeMap;
+extern BlockTimeMap mGlobalForkTips;
+extern BlockSet sGlobalForkTips;
+static const int MAX_NUM_GLOBAL_FORKS = 3;
+
+
 extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
 extern CBlockPolicyEstimator feeEstimator;
@@ -274,7 +298,7 @@ bool GetTransaction(const uint256& hash, CTransactionRef& tx, const Consensus::P
  * May not be called with cs_main held. May not be called in a
  * validationinterface callback.
  */
-bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>());
+bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, bool &postponeRelay, std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>());
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams);
 
 /** Guess verification progress (as a fraction between 0.0=genesis and 1.0=current tip). */

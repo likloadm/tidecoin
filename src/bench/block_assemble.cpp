@@ -84,7 +84,8 @@ static void AssembleBlock(benchmark::State& state)
         GetMainSignals().RegisterBackgroundSignalScheduler(scheduler);
         LoadGenesisBlock(chainparams);
         CValidationState state;
-        ActivateBestChain(state, chainparams);
+        bool postPoneRelay=false;
+        ActivateBestChain(state, chainparams, postPoneRelay);
         assert(::chainActive.Tip() != nullptr);
         const bool witness_enabled{IsWitnessEnabled(::chainActive.Tip(), chainparams.GetConsensus())};
         assert(witness_enabled);

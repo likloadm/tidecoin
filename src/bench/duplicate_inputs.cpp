@@ -47,7 +47,8 @@ static void DuplicateInputs(benchmark::State& state)
         GetMainSignals().RegisterBackgroundSignalScheduler(scheduler);
         LoadGenesisBlock(chainparams);
         CValidationState cvstate;
-        ActivateBestChain(cvstate, chainparams);
+        bool postPoneRelay=false;
+        ActivateBestChain(cvstate, chainparams, postPoneRelay);
         assert(::chainActive.Tip() != nullptr);
         const bool witness_enabled{IsWitnessEnabled(::chainActive.Tip(), chainparams.GetConsensus())};
         assert(witness_enabled);
