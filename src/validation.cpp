@@ -2729,9 +2729,9 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
                 // (with the exception of shutdown due to hardware issues, low disk space, etc).
                 ConnectTrace connectTrace(mempool); // Destructed before cs_main is unlocked
 
-                if (pindexMostWork == nullptr) {
+                //if (pindexMostWork == nullptr) {
                     pindexMostWork = FindMostWorkChain();
-                }
+                //}
 
                 // Whether we have anything to do at all.
                 if (pindexMostWork == nullptr || pindexMostWork == chainActive.Tip()) {

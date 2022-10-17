@@ -842,6 +842,92 @@ void Misbehaving(NodeId pnode, int howmuch, const std::string& message) EXCLUSIV
 
 
 
+//////////////////////////////////////////////////////////////////////////////
+//
+// check if headers are on main tip
+//
+bool getHeadersIsOnMain(const CBlockLocator& locator, const uint256& hashStop, CBlockIndex** pindexReference) {
+    LogPrint(BCLog::ALL, "%s():%d - Entering hashStop[%s]\n", __func__, __LINE__, hashStop.ToString() );
+    if (locator.IsNull() )
+    {
+        LogPrint(BCLog::ALL, "%s():%d - locator is null, returning TRUE\n", __func__, __LINE__ );
+        return true;
+    }
+
+    BOOST_FOREACH(const uint256& hash, locator.vHave) {
+        LogPrint(BCLog::ALL, "%s():%d - locator has [%s]\n", __func__, __LINE__, hash.ToString() );
+    }
+
+    if (hashStop != uint256() )
+    {
+        BlockMap::iterator mi = mapBlockIndex.find(hashStop);
+        if (mi != mapBlockIndex.end() )
+        {
+            *pindexReference = (*mi).second;
+            bool onMain = (chainActive.Contains((*mi).second) );
+            LogPrint(BCLog::ALL, "%s():%d - hashStop found, returning %s\n",
+                __func__, __LINE__, onMain?"TRUE":"FALSE");
+            return onMain;
+        }
+        else
+        {
+            // should never happen
+            LogPrint(BCLog::ALL, "%s():%d - hashStop not found, returning TRUE\n", __func__, __LINE__);
+            return true;
+        }
+    }
+    else
+    {
+        // hashstop can be null:
+        // 1. when a node is syncing after a network join or a node startup
+        // 2. when a bunch of 160 headers has been sent and peer requests more
+
+        if (locator.vHave.size() < 2)
+        {
+            // should never happen
+            LogPrint(BCLog::ALL, "%s():%d - short locator, returning TRUE\n", __func__, __LINE__);
+            return true;
+        }
+
+        const uint256& hash_0 = locator.vHave[0];
+        const uint256& hash_1 = locator.vHave[1];
+
+        if (hash_0 == hash_1)
+        {
+            // we are on case 2. above, check locator for telling if peer is on main or not
+            LogPrint(BCLog::ALL, "%s():%d - found duplicate of hash %s in the locator\n",
+                __func__, __LINE__, hash_0.ToString() );
+
+            BlockMap::iterator mi = mapBlockIndex.find(hash_0);
+            if (mi != mapBlockIndex.end() )
+            {
+                CBlockIndex* idx = (*mi).second;
+
+                if (!chainActive.Contains(idx))
+                {
+                    // tip of locator not on main
+                    *pindexReference = idx;
+                    LogPrint(BCLog::ALL, "%s():%d - hash found, returning FALSE\n",
+                        __func__, __LINE__);
+                    return false;
+                }
+            }
+            else
+            {
+                // should never happen
+                LogPrint(BCLog::ALL, "%s():%d - hash not found, returning TRUE\n", __func__, __LINE__);
+                return true;
+            }
+        }
+
+        LogPrint(BCLog::ALL, "%s():%d - Exiting returning TRUE\n", __func__, __LINE__);
+        return true;
+    }
+
+    // should never get here
+    LogPrint(BCLog::ALL, "%s():%d - ##### Exiting returning FALSE\n", __func__, __LINE__);
+    return false;
+}
 
 
 
@@ -2305,54 +2391,207 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             return true;
         }
 
-        CNodeState *nodestate = State(pfrom->GetId());
-        const CBlockIndex* pindex = nullptr;
-        if (locator.IsNull())
-        {
-            // If locator is null, return the hashStop block
-            pindex = LookupBlockIndex(hashStop);
-            if (!pindex) {
+        CBlockIndex* pindexReference = NULL;
+        bool onMain = getHeadersIsOnMain(locator, hashStop, &pindexReference);
+
+        if (onMain) {
+            CNodeState *nodestate = State(pfrom->GetId());
+            const CBlockIndex* pindex = nullptr;
+            if (locator.IsNull())
+            {
+                // If locator is null, return the hashStop block
+                pindex = LookupBlockIndex(hashStop);
+                if (!pindex) {
+                    return true;
+                }
+
+                if (!BlockRequestAllowed(pindex, chainparams.GetConsensus())) {
+                    LogPrint(BCLog::NET, "%s: ignoring request from peer=%i for old block header that isn't in the main chain\n", __func__, pfrom->GetId());
+                    return true;
+                }
+            }
+            else
+            {
+                // Find the last block the caller has in the main chain
+                pindex = FindForkInGlobalIndex(chainActive, locator);
+                if (pindex)
+                    pindex = chainActive.Next(pindex);
+            }
+
+            // we must use CBlocks, as CBlockHeaders won't include the 0x00 nTx count at the end
+            std::vector<CBlock> vHeaders;
+            int nLimit = MAX_HEADERS_RESULTS;
+            LogPrint(BCLog::NET, "getheaders %d to %s from peer=%d\n", (pindex ? pindex->nHeight : -1), hashStop.IsNull() ? "end" : hashStop.ToString(), pfrom->GetId());
+            for (; pindex; pindex = chainActive.Next(pindex))
+            {
+                vHeaders.push_back(pindex->GetBlockHeader());
+                if (--nLimit <= 0 || pindex->GetBlockHash() == hashStop)
+                    break;
+            }
+            // pindex can be nullptr either if we sent chainActive.Tip() OR
+            // if our peer has chainActive.Tip() (and thus we are sending an empty
+            // headers message). In both cases it's safe to update
+            // pindexBestHeaderSent to be our tip.
+            //
+            // It is important that we simply reset the BestHeaderSent value here,
+            // and not max(BestHeaderSent, newHeaderSent). We might have announced
+            // the currently-being-connected tip using a compact block, which
+            // resulted in the peer sending a headers request, which we respond to
+            // without the new block. By resetting the BestHeaderSent, we ensure we
+            // will re-announce the new block via headers (or compact blocks again)
+            // in the SendMessages logic.
+            nodestate->pindexBestHeaderSent = pindex ? pindex : chainActive.Tip();
+            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
+            return true;
+        } else {
+            if(!pindexReference)
+            {
+                // should never happen
+                LogPrint(BCLog::ALL, "%s():%d - reference not found\n", __func__, __LINE__ );
                 return true;
             }
 
-            if (!BlockRequestAllowed(pindex, chainparams.GetConsensus())) {
-                LogPrint(BCLog::NET, "%s: ignoring request from peer=%i for old block header that isn't in the main chain\n", __func__, pfrom->GetId());
-                return true;
-            }
-        }
-        else
-        {
-            // Find the last block the caller has in the main chain
-            pindex = FindForkInGlobalIndex(chainActive, locator);
-            if (pindex)
-                pindex = chainActive.Next(pindex);
-        }
+            if (hashStop != uint256() )
+            {
+                BlockMap::iterator mi = mapBlockIndex.find(hashStop);
+                if (mi == mapBlockIndex.end() )
+                {
+                    // should never happen
+                    LogPrint(BCLog::ALL, "%s():%d - block [%s] not found\n", __func__, __LINE__, hashStop.ToString() );
+                    return true;
+                }
 
-        // we must use CBlocks, as CBlockHeaders won't include the 0x00 nTx count at the end
-        std::vector<CBlock> vHeaders;
-        int nLimit = MAX_HEADERS_RESULTS;
-        LogPrint(BCLog::NET, "getheaders %d to %s from peer=%d\n", (pindex ? pindex->nHeight : -1), hashStop.IsNull() ? "end" : hashStop.ToString(), pfrom->GetId());
-        for (; pindex; pindex = chainActive.Next(pindex))
-        {
-            vHeaders.push_back(pindex->GetBlockHeader());
-            if (--nLimit <= 0 || pindex->GetBlockHash() == hashStop)
-                break;
+                LogPrint(BCLog::ALL, "%s():%d - peer is not using chain active! Starting from %s at h(%d)\n",
+                    __func__, __LINE__, pindexReference->GetBlockHash().ToString(), pindexReference->nHeight );
+
+                std::deque<CBlock> dHeadersAlternative;
+
+                bool found = false;
+
+                // the reference is the block which triggered the getheader request (the hashStop)
+                while ( pindexReference )
+                {
+                    dHeadersAlternative.push_front(CBlock(pindexReference->GetBlockHeader()));
+
+                    BOOST_FOREACH(const uint256& hash, locator.vHave)
+                    {
+                        if (hash == pindexReference->GetBlockHash() )
+                        {
+                            // we found the tip passed along in locator, we must stop here
+                            LogPrint(BCLog::ALL, "%s():%d - matched fork tip in locator [%s]\n",
+                                __func__, __LINE__, hash.ToString() );
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found || pindexReference->pprev == chainActive.Genesis() )
+                    {
+                        break;
+                    }
+
+                    pindexReference = pindexReference->pprev;
+                }
+
+                std::vector<CBlock> vHeaders;
+                int nLimit = MAX_HEADERS_RESULTS;
+                // we are on a fork: fill the vector rewinding the deque so that we have the correct ordering
+                LogPrint(BCLog::ALL, "%s():%d - Found %d headers to push to node[%s]:\n", __func__, __LINE__, dHeadersAlternative.size(), pfrom->addr.ToString());
+                for(const auto& cb : dHeadersAlternative) {
+                    LogPrint(BCLog::ALL, "%s():%d -- [%s]\n", __func__, __LINE__, cb.GetHash().ToString() );
+                    vHeaders.push_back(cb);
+                    if (--nLimit <= 0)
+                        break;
+                }
+                LogPrint(BCLog::ALL, "%s():%d - Pushing %d headers to node[%s]\n", __func__, __LINE__, vHeaders.size(), pfrom->addr.ToString());
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
+                //pfrom->PushMessage("headers", vHeaders);
+            }
+            else
+            {
+                LogPrint(BCLog::ALL, "%s():%d - hashStop block is null\n", __func__, __LINE__);
+
+                // this is the case when we just sent 160 headers, reference is the header which the last getheader
+                // request has reached: more must be sent starting from this one
+                std::set<const CBlockIndex*> sProcessed;
+                std::vector<CBlock> vHeadersMulti;
+                int nLimit = MAX_HEADERS_RESULTS;
+
+                int h = pindexReference->nHeight;
+
+                LogPrint(BCLog::ALL, "%s():%d - Searching up to %s h(%d) from tips backwards\n",
+                    __func__, __LINE__, pindexReference->GetBlockHash().ToString(), pindexReference->nHeight);
+
+                // we must follow all forks backwards because we can not tell which is the concerned one
+                // peer will discard headers already known if any
+                BOOST_FOREACH(auto mapPair, mGlobalForkTips)
+                {
+                    const CBlockIndex* block = mapPair.first;
+                    if (block == chainActive.Tip() || block == pindexBestHeader )
+                    {
+                        LogPrint(BCLog::ALL, "%s():%d - skipping tips\n", __func__, __LINE__);
+                        continue;
+                    }
+
+                    std::deque<CBlock> dHeadersAlternativeMulti;
+
+                    LogPrint(BCLog::ALL, "%s():%d - tips %s h(%d)\n",
+                        __func__, __LINE__, block->GetBlockHash().ToString(), block->nHeight);
+
+                    while (block &&
+                           block != pindexReference &&
+                           block->nHeight >= h)
+                    {
+                        if (!sProcessed.count(block) )
+                        {
+                            LogPrint(BCLog::ALL, "%s():%d - adding %s h(%d)\n",
+                                __func__, __LINE__, block->GetBlockHash().ToString(), block->nHeight);
+                            dHeadersAlternativeMulti.push_front(CBlock(block->GetBlockHeader()));
+                            sProcessed.insert(block);
+                        }
+                        block = block->pprev;
+                    }
+
+                    if (block == pindexReference)
+                    {
+                        // we exited from the while loop with the right condition, therefore we must take this branch into account
+                        LogPrint(BCLog::ALL, "%s():%d - found reference %s h(%d)\n",
+                            __func__, __LINE__, block->GetBlockHash().ToString(), block->nHeight);
+
+                        // we must process each deque in order to have a resulting vector with headers in the correct order
+                        // for all possible forks
+                        for(const auto& cb : dHeadersAlternativeMulti)
+                        {
+                            if (--nLimit > 0)
+                            {
+                                LogPrint(BCLog::ALL, "%s():%d -- [%s]\n", __func__, __LINE__, cb.GetHash().ToString() );
+                                vHeadersMulti.push_back(cb);
+                            }
+                        }
+                    }
+                    else
+                    if (block->nHeight < h)
+                    {
+                        // we must neglect this branch since not linked to the reference
+                        LogPrint(BCLog::ALL, "%s():%d - could not find reference, stopped at %s h(%d)\n",
+                            __func__, __LINE__, block->GetBlockHash().ToString(), block->nHeight);
+                    }
+                    else
+                    {
+                        // should never happen
+                        LogPrint(BCLog::ALL, "%s():%d - block ptr is null\n", __func__, __LINE__);
+                    }
+                }
+
+                LogPrint(BCLog::ALL, "%s():%d - Pushing %d headers to node[%s]\n",
+                    __func__, __LINE__, vHeadersMulti.size(), pfrom->addr.ToString());
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::HEADERS, vHeadersMulti));
+                //pfrom->PushMessage("headers", vHeadersMulti);
+
+            } // end of hashstop is null
+
+
         }
-        // pindex can be nullptr either if we sent chainActive.Tip() OR
-        // if our peer has chainActive.Tip() (and thus we are sending an empty
-        // headers message). In both cases it's safe to update
-        // pindexBestHeaderSent to be our tip.
-        //
-        // It is important that we simply reset the BestHeaderSent value here,
-        // and not max(BestHeaderSent, newHeaderSent). We might have announced
-        // the currently-being-connected tip using a compact block, which
-        // resulted in the peer sending a headers request, which we respond to
-        // without the new block. By resetting the BestHeaderSent, we ensure we
-        // will re-announce the new block via headers (or compact blocks again)
-        // in the SendMessages logic.
-        nodestate->pindexBestHeaderSent = pindex ? pindex : chainActive.Tip();
-        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
-        return true;
     }
 
     if (strCommand == NetMsgType::TX) {
